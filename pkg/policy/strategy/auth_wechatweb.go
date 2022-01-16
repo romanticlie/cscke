@@ -1,11 +1,11 @@
 package strategy
 
 import (
+	"cscke/pkg/fun"
+	"cscke/pkg/policy/contract"
 	"encoding/json"
 	"errors"
 	"net/url"
-	"cscke/pkg/fun"
-	"cscke/pkg/policy/contract"
 	"sync"
 )
 
@@ -13,9 +13,11 @@ var WechatWebOpts *contract.AuthOpts
 var WechatWebOptsOnce sync.Once
 
 type WechatWebStrategy struct {
-	token *contract.Token
-	user *contract.AuthUser
+	user      *contract.AuthUser
+	accessUrl string
 }
+
+var _ contract.AuthContract = &WechatWebStrategy{}
 
 func (w *WechatWebStrategy) GetConfig() *contract.AuthOpts {
 
@@ -35,12 +37,13 @@ func (w *WechatWebStrategy) GetConfig() *contract.AuthOpts {
 	return WechatWebOpts
 }
 
-func (w *WechatWebStrategy) GetAuthUrl() string {
+func (w *WechatWebStrategy) getAuthUrl() string {
 
 	return "https://open.weixin.qq.com/connect/qrconnect"
 }
 
-func (w *WechatWebStrategy) BuildAuthUrl(state string) string {
+// buildAuthUrl 拼接授权地址
+func (w *WechatWebStrategy) buildAuthUrl(state string) string {
 
 	c := w.GetConfig()
 
@@ -51,19 +54,32 @@ func (w *WechatWebStrategy) BuildAuthUrl(state string) string {
 	p.Set("scope", "snsapi_login")
 	p.Set("state", state)
 
-	return w.GetAuthUrl() + "?" + p.Encode() + "#wechat_redirect"
+	return w.getAuthUrl() + "?" + p.Encode() + "#wechat_redirect"
 }
 
-func (w *WechatWebStrategy) GetTokenUrl() string {
+// AccessUrl 获取授权地址
+func (w *WechatWebStrategy) AccessUrl(state string) string {
+
+	if w.accessUrl != "" {
+		return w.accessUrl
+	}
+
+	w.accessUrl = w.buildAuthUrl(state)
+
+	return w.accessUrl
+}
+
+func (w *WechatWebStrategy) getTokenUrl() string {
 
 	return "https://api.weixin.qq.com/sns/oauth2/access_token"
 }
 
-func (w *WechatWebStrategy) GetAccessToken(code string) (t *contract.Token, err error) {
+// GetAccessToken 通过code获取accessToken
+func (w *WechatWebStrategy) getAccessToken(code string) (t *contract.Token, err error) {
 
 	c := w.GetConfig()
 
-	resp, err := fun.HttpGet(w.GetTokenUrl(), map[string]string{
+	resp, err := fun.HttpGet(w.getTokenUrl(), map[string]string{
 		"appid":      c.AppId,
 		"secret":     c.AppSecret,
 		"code":       code,
@@ -87,39 +103,30 @@ func (w *WechatWebStrategy) GetAccessToken(code string) (t *contract.Token, err 
 		return nil, errors.New(string(resp))
 	}
 
-	w.SetToken(&contract.Token{
+	return &contract.Token{
 		AccessToken: respFmt.AccessToken,
 		Openid:      respFmt.Openid,
 		UnionId:     respFmt.UnionId,
-	})
-
-	return w.GetToken(), nil
+	}, nil
 }
 
-func (w *WechatWebStrategy) SetToken(token *contract.Token) {
-	w.token = token
-}
-
-func (w *WechatWebStrategy) GetToken() *contract.Token{
-	return w.token
-}
-
-func (w *WechatWebStrategy) GetUserUrl() string {
+// getUserUrl 获取用户信息基础地址
+func (w *WechatWebStrategy) getUserUrl() string {
 
 	return "https://api.weixin.qq.com/sns/userinfo"
 }
 
-func (w *WechatWebStrategy) GetUserByCode(code string) (*contract.AuthUser, error) {
+func (w *WechatWebStrategy) UserFromTicket(ticket string) (*contract.AuthUser, error) {
 
-	t, err := w.GetAccessToken(code)
+	token, err := w.getAccessToken(ticket)
 
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := fun.HttpGet(w.GetUserUrl(), map[string]string{
-		"access_token": t.AccessToken,
-		"openid":       t.Openid,
+	resp, err := fun.HttpGet(w.getUserUrl(), map[string]string{
+		"access_token": token.AccessToken,
+		"openid":       token.Openid,
 		"lang":         "zh_CN",
 	}, nil)
 
@@ -139,28 +146,19 @@ func (w *WechatWebStrategy) GetUserByCode(code string) (*contract.AuthUser, erro
 		return nil, errors.New(string(resp))
 	}
 
-	w.SetUser(&contract.AuthUser{
+	w.user = &contract.AuthUser{
 		Openid:   respFmt.Openid,
 		UnionId:  respFmt.UnionId,
 		Nickname: respFmt.Nickname,
 		Gender:   respFmt.Sex,
 		Avatar:   respFmt.HeadImgUrl,
-	})
+	}
 
-	return w.GetUser(), nil
+	return w.user, nil
 }
 
-func (w *WechatWebStrategy) GetUserByToken(token string) (*contract.AuthUser, error) {
-	return nil,nil
-}
+// GetUser 获取用户信息
+func (w *WechatWebStrategy) GetUser() *contract.AuthUser {
 
-func (w *WechatWebStrategy) SetUser(user *contract.AuthUser){
-	w.user = user
-}
-
-func (w *WechatWebStrategy) GetUser() *contract.AuthUser{
 	return w.user
 }
-
-
-

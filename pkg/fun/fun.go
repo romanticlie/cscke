@@ -13,21 +13,23 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
 
 var (
-	Y = "2006"
-	M = "01"
-	D = "02"
-	H = "15"
-	I = "04"
-	S = "05"
-	DateTime = fmt.Sprintf("%s-%s-%s %s:%s:%s",Y,M,D,H,I,S)
+	Y        = "2006"
+	M        = "01"
+	D        = "02"
+	H        = "15"
+	I        = "04"
+	S        = "05"
+	DateTime = fmt.Sprintf("%s-%s-%s %s:%s:%s", Y, M, D, H, I, S)
+	seedOnce sync.Once
 )
 
 // GetYamlCfg 获取cfg的yaml文件配置
-func GetYamlCfg(filename string) (*viper.Viper,error){
+func GetYamlCfg(filename string) (*viper.Viper, error) {
 
 	//获取项目的执行路径
 	v := viper.New()
@@ -37,37 +39,38 @@ func GetYamlCfg(filename string) (*viper.Viper,error){
 
 	//尝试读取文件
 	if err := v.ReadInConfig(); err != nil {
-		return v,err
+		return v, err
 	}
 
-	return v,nil
+	return v, nil
 }
 
-
 // Random 随机一个范围的数
-func Random(min int,max int) int{
+func Random(min int, max int) int {
 
-	rand.Seed(time.Now().UnixNano())
+	seedOnce.Do(func() {
+		rand.Seed(time.Now().UnixNano())
+	})
 
-	return rand.Intn(max - min) + min
+	max = max + 1
+
+	return rand.Intn(max-min) + min
 }
 
 // MapStringKeys 获取map的key值
-func MapStringKeys(m map[string]string) []string{
+func MapStringKeys(m map[string]string) []string {
 
-	keys := make([]string,len(m))
+	keys := make([]string, len(m))
 
 	i := 0
 
-	for k,_ := range m {
+	for k, _ := range m {
 		keys[i] = k
 		i++
 	}
 
 	return keys
 }
-
-
 
 // HttpGet 普通的GET请求
 func HttpGet(u string, q map[string]string, h map[string]string) (b []byte, err error) {
@@ -106,7 +109,6 @@ func HttpGet(u string, q map[string]string, h map[string]string) (b []byte, err 
 
 	return ioutil.ReadAll(resp.Body)
 }
-
 
 // HttpPost 普通的POST请求
 func HttpPost(u string, p map[string]string, h map[string]string) (b []byte, err error) {
@@ -149,7 +151,6 @@ func HttpPost(u string, p map[string]string, h map[string]string) (b []byte, err
 
 	return ioutil.ReadAll(resp.Body)
 }
-
 
 // HttpJson JSON的POST请求
 func HttpJson(u string, j []byte, h map[string]string) (b []byte, err error) {
@@ -220,7 +221,6 @@ func HttpFiles(u string, fs [][]string, p map[string]string, h map[string]string
 			filename = path.Base(item[1])
 		}
 
-
 		fileWriter, err := writer.CreateFormFile(item[0], filename)
 
 		if err != nil {
@@ -279,5 +279,3 @@ func HttpFiles(u string, fs [][]string, p map[string]string, h map[string]string
 
 	return ioutil.ReadAll(resp.Body)
 }
-
-

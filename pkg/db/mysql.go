@@ -1,15 +1,16 @@
 package db
 
 import (
+	"cscke/pkg/fun"
+	"cscke/pkg/logmsg"
 	"database/sql"
 	"fmt"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"log"
 	"net/url"
-	"cscke/pkg/fun"
-	"cscke/pkg/logmsg"
 	"sync"
 	"time"
 )
@@ -17,7 +18,7 @@ import (
 var (
 	sqlConn *gorm.DB
 	sqlOnce sync.Once
-	sqlErr error
+	sqlErr  error
 )
 
 type MySqlCfg struct {
@@ -31,7 +32,7 @@ type MySqlCfg struct {
 }
 
 // MysqlConnect 获取Mysql的连接
-func MysqlConnect() (*gorm.DB,error) {
+func MysqlConnect() (*gorm.DB, error) {
 
 	if sqlConn == nil {
 		sqlOnce.Do(func() {
@@ -55,17 +56,18 @@ func MysqlConnect() (*gorm.DB,error) {
 			}
 
 			dns := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=true&loc=%s",
-					cfg.Username,
-					cfg.Password,
-					cfg.Host,
-					cfg.Port,
-					cfg.Database,
-					cfg.Charset,
-					url.QueryEscape(cfg.Loc),
-				)
+				cfg.Username,
+				cfg.Password,
+				cfg.Host,
+				cfg.Port,
+				cfg.Database,
+				cfg.Charset,
+				url.QueryEscape(cfg.Loc),
+			)
 
-
-			sqlConn, sqlErr = gorm.Open(mysql.Open(dns))
+			sqlConn, sqlErr = gorm.Open(mysql.Open(dns), &gorm.Config{
+				Logger: logger.Default.LogMode(logger.Warn),
+			})
 
 			if sqlErr != nil {
 				log.Println(logmsg.MysqlConnErr, sqlErr)
@@ -74,7 +76,7 @@ func MysqlConnect() (*gorm.DB,error) {
 
 			var sqbDB *sql.DB
 
-			sqbDB,sqlErr = sqlConn.DB()
+			sqbDB, sqlErr = sqlConn.DB()
 
 			if sqlErr != nil {
 				log.Println(logmsg.MysqlConnErr, sqlErr)
@@ -89,5 +91,5 @@ func MysqlConnect() (*gorm.DB,error) {
 		})
 	}
 
-	return sqlConn,sqlErr
+	return sqlConn, sqlErr
 }

@@ -4,4 +4,4 @@ authorization:
   wechatWeb:
     appId: "wxf746243b47e3573a"
     appSecret: "8e535b5d2c8a7b3074d7ac1aba80bc95"
-    redirectUri: "http://cscke.ginguess.com/index"
+    redirectUri: "http://cscke.ginguess.com/#/notify/authorized"

@@ -1,11 +1,11 @@
 package repository
 
 import (
-	"encoding/json"
-	"log"
 	"cscke/internal/model"
 	"cscke/pkg/fun"
 	"cscke/pkg/logmsg"
+	"encoding/json"
+	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -45,7 +45,7 @@ func (u *UserRepo) GetByUniqueId(userid uint64) (*model.User, error) {
 		}
 	}
 
-	tx := d.First(user, userid)
+	tx := D.Take(user, userid)
 
 	if tx.Error != nil {
 		return user, err
@@ -61,18 +61,22 @@ func (u *UserRepo) GetByUniqueId(userid uint64) (*model.User, error) {
 	return user, nil
 }
 
-// FindByNickname 根据nickname 获取用户信息
-func (u *UserRepo) FindByNickname(nickname string) (*model.User, error) {
+// FindByOpenid 通过openid 获取用户信息
+func (u *UserRepo) FindByOpenid(platform int, openid string) (*model.UserPlatform, error) {
 
-	user := &model.User{}
+	userPlatform := &model.UserPlatform{}
 
-	tx := d.Where("nickname", nickname).First(user)
+	tx := D.Where("platform = ? and openid = ?", platform, openid).Take(userPlatform)
 
-	return user, tx.Error
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return userPlatform, nil
 }
 
 // Create 新建用户
-func (u *UserRepo) Create(registerIp string,nickname string,telephone string) (user *model.User, err error) {
+func (u *UserRepo) Create(registerIp string, nickname string, avatar string, telephone string) (user *model.User, err error) {
 
 	uid, err := u.generateUserid()
 
@@ -80,21 +84,21 @@ func (u *UserRepo) Create(registerIp string,nickname string,telephone string) (u
 		return nil, err
 	}
 
-	fields := []string{"Userid","Nickname","Avatar","Gender"}
+	fields := []string{"Userid", "Nickname", "Avatar", "RegisterIp"}
 
 	user = &model.User{
 		Userid:     uid,
 		Nickname:   nickname,
+		Avatar:     avatar,
+		RegisterIp: registerIp,
 	}
-
 
 	if telephone != "" {
 		user.Telephone = telephone
-		fields = append(fields,"Telephone")
+		fields = append(fields, "Telephone")
 	}
 
-
-	tx := d.Select(fields).Create(user)
+	tx := D.Select(fields).Create(user)
 
 	if tx.Error != nil {
 		return nil, tx.Error

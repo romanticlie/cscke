@@ -1,16 +1,17 @@
 package route
 
 import (
-	"github.com/gin-gonic/gin"
-	"net/http"
 	"cscke/internal/controller/resource"
-	"cscke/internal/controller/tourist"
+	"cscke/internal/controller/tourists"
 	"cscke/internal/controller/user"
 	"cscke/internal/middleware"
+	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
+func Boot(r *gin.Engine) {
 
-func Boot(r *gin.Engine){
+	r.Use(middleware.Cross)
 
 	//基础路由
 	mapBaseRoute(r)
@@ -19,33 +20,33 @@ func Boot(r *gin.Engine){
 	mapApiRoute(r)
 }
 
-func mapBaseRoute(r *gin.Engine){
+func mapBaseRoute(r *gin.Engine) {
 
 	r.GET("/", func(c *gin.Context) {
-		c.String(http.StatusOK,"cscke")
+		c.String(http.StatusOK, "cscke")
 	})
 
 }
 
-func mapApiRoute(r *gin.Engine){
+func mapApiRoute(r *gin.Engine) {
 
 	api := r.Group("/api")
 	{
-		ts := api.Group("/tourist")
+		ts := api.Group("/tourists")
 		{
-			ts.POST("/login",tourist.Login)
-			ts.POST("/register",tourist.Register)
+			ts.GET("/authorized", tourists.Authorized)
+			ts.POST("/snsLog", tourists.SnsLogin)
 		}
 
 		u := api.Group("/user")
 		u.Use(middleware.Auth)
 		{
-			u.GET("/full",user.Full)
+			u.GET("/full", user.Full)
 		}
 
 		res := api.Group("/resource")
 		{
-			res.POST("/upload",resource.Upload)
+			res.POST("/upload", resource.Upload)
 		}
 	}
 
