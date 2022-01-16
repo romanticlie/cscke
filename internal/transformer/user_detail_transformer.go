@@ -1,9 +1,10 @@
 package transformer
 
 import (
-	"github.com/ibllex/go-fractal"
 	"cscke/internal/model"
 	"cscke/pkg/fun"
+	"github.com/ibllex/go-fractal"
+	"strconv"
 )
 
 const (
@@ -35,6 +36,7 @@ func (t *UserDetailTransformer) Transform(data fractal.Any) fractal.M {
 
 	if user, ok := data.(*model.User); ok {
 		result["userid"] = user.Userid
+		result["strid"] = strconv.FormatUint(user.Userid, 10)
 
 		//根据模块来获取
 		for _, module := range t.modules {
