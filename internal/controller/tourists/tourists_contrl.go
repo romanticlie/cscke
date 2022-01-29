@@ -5,6 +5,7 @@ import (
 	"cscke/internal/response"
 	"cscke/internal/service"
 	"cscke/internal/transformer"
+	"cscke/internal/validate"
 	"cscke/pkg/policy/context"
 	"github.com/gin-gonic/gin"
 )
@@ -12,34 +13,25 @@ import (
 // Authorized 获取授权地址
 func Authorized(c *gin.Context) {
 
-	platform, ok := c.GetQuery("platform")
+	params, err := validate.AuthorizedValidator(c)
 
-	if !ok {
+	if err != nil {
 		response.Code(c, code.ClientErr)
 		return
 	}
 
 	response.Data(c, map[string]interface{}{
-		"authorizedUrl": context.GetAuthContext(platform).AuthorizedUrl(),
+		"authorizedUrl": context.GetAuthContext(params.Platform).AuthorizedUrl(),
 	})
 }
 
 // SnsLogin 授权登录
 func SnsLogin(c *gin.Context) {
 
-	params := &struct {
-		Platform string `json:"platform"`
-		Ticket   string `json:"ticket"`
-		State    string `json:"state"`
-	}{}
+	params, err := validate.SnsLoginValidator(c)
 
-	if err := c.BindJSON(params); err != nil {
-		response.Code(c, code.ClientErr)
-		return
-	}
-
-	if params.Platform == "" || params.Ticket == "" {
-		response.Code(c, code.ClientErr)
+	if err != nil {
+		response.Code(c, code.ServerBusy)
 		return
 	}
 
