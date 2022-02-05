@@ -36,6 +36,7 @@ func mapApiRoute(r *gin.Engine) {
 		{
 			ts.GET("/authorized", tourists.Authorized)
 			ts.POST("/snsLog", tourists.SnsLogin)
+			ts.POST("/telephone", tourists.Telephone)
 		}
 
 		u := api.Group("/user")

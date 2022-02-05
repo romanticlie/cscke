@@ -3,9 +3,6 @@ package repository
 import (
 	"cscke/internal/model"
 	"cscke/pkg/fun"
-	"cscke/pkg/logmsg"
-	"encoding/json"
-	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -31,48 +28,32 @@ func GetUserRepo() *UserRepo {
 type UserRepo struct {
 }
 
-// GetByUniqueId 根据主键获取用户信息
-func (u *UserRepo) GetByUniqueId(userid uint64) (*model.User, error) {
+// GetByUserid 根据主键获取用户信息
+func (u *UserRepo) GetByUserid(userid uint64) (*model.User, error) {
 
 	user := &model.User{}
-
-	//先从缓存中读取
-	j, err := GetUserRedisRepo().GetByUserid(userid)
-
-	if err == nil {
-		if err = json.Unmarshal([]byte(j), user); err == nil {
-			return user, nil
-		}
-	}
 
 	tx := D.Take(user, userid)
 
 	if tx.Error != nil {
-		return user, err
-	}
-
-	//缓存用户信息
-	_, err = GetUserRedisRepo().CacheByUserid(user.Userid, user)
-
-	if err != nil {
-		log.Println(logmsg.UserCacheErr, err)
+		return user, tx.Error
 	}
 
 	return user, nil
 }
 
-// FindByOpenid 通过openid 获取用户信息
-func (u *UserRepo) FindByOpenid(platform int, openid string) (*model.UserPlatform, error) {
+// FindByTelephone 通过手机号获取用户
+func (u *UserRepo) FindByTelephone(tel string) (*model.User, error) {
 
-	userPlatform := &model.UserPlatform{}
+	user := new(model.User)
 
-	tx := D.Where("platform = ? and openid = ?", platform, openid).Take(userPlatform)
+	tx := D.Where("telephone = ?", tel).Take(user)
 
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 
-	return userPlatform, nil
+	return user, nil
 }
 
 // Create 新建用户

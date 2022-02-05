@@ -42,6 +42,20 @@ func (p *UserPlatformRepo) MapDriverPlatform(driverPlatform string) int {
 	return platform
 }
 
+// FindByOpenid 通过openid 获取平台用户
+func (p *UserPlatformRepo) FindByOpenid(platform int, openid string) (*model.UserPlatform, error) {
+
+	userPlatform := &model.UserPlatform{}
+
+	tx := D.Where("platform = ? and openid = ?", platform, openid).Take(userPlatform)
+
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return userPlatform, nil
+}
+
 func (p *UserPlatformRepo) CreateUserPlatform(userid uint64, platform int, openid string, unionId string) error {
 
 	if platform == 0 || openid == "" {

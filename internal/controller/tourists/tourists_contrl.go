@@ -31,7 +31,7 @@ func SnsLogin(c *gin.Context) {
 	params, err := validate.SnsLoginValidator(c)
 
 	if err != nil {
-		response.Code(c, code.ServerBusy)
+		response.Msg(c, err.Error())
 		return
 	}
 
@@ -46,4 +46,28 @@ func SnsLogin(c *gin.Context) {
 		"user":  transformer.Item(user, transformer.NewUserDetailTransformer())["data"],
 		"token": service.GetUserServ().GenTokenByUser(user),
 	})
+}
+
+// Telephone 手机号登录
+func Telephone(c *gin.Context) {
+
+	params, err := validate.TelephoneValidator(c)
+
+	if err != nil {
+		response.Msg(c, err.Error())
+		return
+	}
+
+	user, err := service.GetUserServ().TelephoneLogin(params.Tel, params.Random, c.ClientIP())
+
+	if err != nil {
+		response.Msg(c, err.Error())
+		return
+	}
+
+	response.Data(c, map[string]interface{}{
+		"user":  transformer.Item(user, transformer.NewUserDetailTransformer())["data"],
+		"token": service.GetUserServ().GenTokenByUser(user),
+	})
+
 }

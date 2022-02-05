@@ -1,18 +1,11 @@
 package fun
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/spf13/viper"
-	"io"
 	"io/ioutil"
 	"math/rand"
-	"mime/multipart"
 	"net/http"
-	"net/url"
-	"os"
-	"path"
-	"strings"
 	"sync"
 	"time"
 )
@@ -75,28 +68,12 @@ func MapStringKeys(m map[string]string) []string {
 // HttpGet 普通的GET请求
 func HttpGet(u string, q map[string]string, h map[string]string) (b []byte, err error) {
 
-	if q != nil {
-		qs := url.Values{}
-
-		for k, v := range q {
-			qs.Set(k, v)
-		}
-
-		u = u + "?" + qs.Encode()
-	}
-
 	client := &http.Client{}
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := NewGetRequest(u, q, h)
 
 	if err != nil {
 		return
-	}
-
-	if h != nil {
-		for k, v := range h {
-			req.Header.Set(k, v)
-		}
 	}
 
 	resp, err := client.Do(req)
@@ -113,32 +90,12 @@ func HttpGet(u string, q map[string]string, h map[string]string) (b []byte, err 
 // HttpPost 普通的POST请求
 func HttpPost(u string, p map[string]string, h map[string]string) (b []byte, err error) {
 
-	var reader *strings.Reader
-
-	if p != nil {
-		qs := url.Values{}
-
-		for k, v := range p {
-			qs.Set(k, v)
-		}
-
-		reader = strings.NewReader(qs.Encode())
-	}
-
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", u, reader)
+	req, err := NewPostRequest(u, p, h)
 
 	if err != nil {
 		return
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	if h != nil {
-		for k, v := range h {
-			req.Header.Set(k, v)
-		}
 	}
 
 	resp, err := client.Do(req)
@@ -157,18 +114,10 @@ func HttpJson(u string, j []byte, h map[string]string) (b []byte, err error) {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", u, bytes.NewReader(j))
+	req, err := NewJsonRequest(u, j, h)
 
 	if err != nil {
 		return
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	if h != nil {
-		for k, v := range h {
-			req.Header.Set(k, v)
-		}
 	}
 
 	resp, err := client.Do(req)
@@ -189,84 +138,12 @@ func HttpJson(u string, j []byte, h map[string]string) (b []byte, err error) {
 // h header参数
 func HttpFiles(u string, fs [][]string, p map[string]string, h map[string]string) (b []byte, err error) {
 
-	if len(fs) == 0 {
-		return
-	}
-
-	//检查文件是否存在
-	for _, item := range fs {
-
-		if len(item) < 2 {
-			return
-		}
-
-		_, err := os.Lstat(item[1])
-
-		if os.IsNotExist(err) {
-			return b, err
-		}
-	}
-
-	readerBuf := new(bytes.Buffer)
-
-	writer := multipart.NewWriter(readerBuf)
-
-	for _, item := range fs {
-
-		var filename string
-
-		if len(item) >= 3 {
-			filename = item[2]
-		} else {
-			filename = path.Base(item[1])
-		}
-
-		fileWriter, err := writer.CreateFormFile(item[0], filename)
-
-		if err != nil {
-			return b, err
-		}
-
-		file, err := os.Open(item[1])
-
-		if err != nil {
-			return b, err
-		}
-
-		io.Copy(fileWriter, file)
-
-		//关闭文件
-		if err := file.Close(); err != nil {
-			return b, err
-		}
-	}
-
-	writer.Close()
-
-	if p != nil {
-
-		for k, v := range p {
-			if err := writer.WriteField(k, v); err != nil {
-				return b, err
-			}
-		}
-
-	}
-
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", u, readerBuf)
+	req, err := NewFilesRequest(u, fs, p, h)
 
 	if err != nil {
 		return
-	}
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	if h != nil {
-		for k, v := range h {
-			req.Header.Set(k, v)
-		}
 	}
 
 	resp, err := client.Do(req)

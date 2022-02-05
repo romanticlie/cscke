@@ -2,9 +2,7 @@
 package main
 
 import (
-	"cscke/internal/route"
-	"cscke/pkg/db"
-	"github.com/gin-gonic/gin"
+	"cscke/pkg/boot"
 	"github.com/jpillora/overseer"
 	"github.com/jpillora/overseer/fetcher"
 	"time"
@@ -30,14 +28,7 @@ func main() {
 
 func Program(state overseer.State) {
 
-	r := gin.Default()
-
-	route.Boot(r)
-
-	//init db
-	db.Boot()
-
 	//r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
-	r.RunListener(state.Listener)
+	boot.Setup().RunListener(state.Listener)
 }
