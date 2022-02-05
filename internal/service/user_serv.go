@@ -9,6 +9,7 @@ import (
 	"cscke/pkg/policy/contract"
 	"encoding/json"
 	"errors"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 	"log"
 	"strconv"
@@ -40,15 +41,16 @@ func (u *UserService) GetUserByUserId(userid uint64) (*model.User, error) {
 	user := new(model.User)
 
 	//先从缓存中读取
-	j, _ := repository.GetUserRedisRepo().GetByUserid(userid)
+	j, err := repository.GetUserRedisRepo().GetByUserid(userid)
 
-	//if err != nil {
-	//	return nil, err
-	//}
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
 
-	if j != "" {
+	//数据不为空
+	if err != redis.Nil {
 		//缓存序列化，直接返回
-		if err := json.Unmarshal([]byte(j), user); err != nil {
+		if err = json.Unmarshal([]byte(j), user); err != nil {
 			return nil, err
 		}
 
@@ -57,7 +59,7 @@ func (u *UserService) GetUserByUserId(userid uint64) (*model.User, error) {
 	}
 
 	//数据库查询
-	user, err := repository.GetUserRepo().GetByUserid(userid)
+	user, err = repository.GetUserRepo().GetByUserid(userid)
 
 	if err != nil {
 		return nil, err
@@ -122,13 +124,23 @@ func (u *UserService) LogSnsLogin(plat string, ticket string, registerIp string)
 	//查看用户是否存在
 	userPlatform, err := repository.GetUserPlatformRepo().FindByOpenid(platform, authUser.Openid)
 
+	userEmpty := false
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		userEmpty = true
+	}
+
+	if err != nil && !userEmpty {
+		return nil, err
+	}
+
 	//用户存在，直接获取用户
 	if err == nil {
 		return u.GetUserByUserId(userPlatform.Userid)
 	}
 
 	//如果用户不存在，注册一个用户
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if userEmpty {
 
 		//开启事务
 		user, err = u.registerUser(registerIp, authUser.Nickname, authUser.Avatar, "", platform, authUser)
@@ -138,11 +150,7 @@ func (u *UserService) LogSnsLogin(plat string, ticket string, registerIp string)
 		}
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return user, err
+	return user, nil
 }
 
 // TelephoneLogin 手机号登录
