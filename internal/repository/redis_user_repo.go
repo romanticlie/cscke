@@ -4,7 +4,6 @@ import (
 	"cscke/internal/code"
 	"cscke/internal/model"
 	"encoding/json"
-	"errors"
 	"strconv"
 	"sync"
 	"time"
@@ -36,10 +35,6 @@ func (u *UserRedisRepo) GetByUserid(userid uint64) (ret string, err error) {
 	key := code.CacheKey(code.UserInfo, strconv.FormatUint(userid, 10))
 
 	ret, err = Rd.Get(Rd.Context(), key).Result()
-
-	if ret == "" {
-		err = errors.New("userid not exists")
-	}
 
 	return
 }

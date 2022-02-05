@@ -46,9 +46,14 @@ func (u *UserService) GetUserByUserId(userid uint64) (*model.User, error) {
 		return nil, err
 	}
 
-	//缓存序列化，直接返回
-	if err = json.Unmarshal([]byte(j), user); err != nil {
-		return nil, err
+	if j != "" {
+		//缓存序列化，直接返回
+		if err = json.Unmarshal([]byte(j), user); err != nil {
+			return nil, err
+		}
+
+		//直接返回
+		return user, nil
 	}
 
 	//数据库查询
