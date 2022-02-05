@@ -40,15 +40,15 @@ func (u *UserService) GetUserByUserId(userid uint64) (*model.User, error) {
 	user := new(model.User)
 
 	//先从缓存中读取
-	j, err := repository.GetUserRedisRepo().GetByUserid(userid)
+	j, _ := repository.GetUserRedisRepo().GetByUserid(userid)
 
-	if err != nil {
-		return nil, err
-	}
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	if j != "" {
 		//缓存序列化，直接返回
-		if err = json.Unmarshal([]byte(j), user); err != nil {
+		if err := json.Unmarshal([]byte(j), user); err != nil {
 			return nil, err
 		}
 
@@ -57,7 +57,7 @@ func (u *UserService) GetUserByUserId(userid uint64) (*model.User, error) {
 	}
 
 	//数据库查询
-	user, err = repository.GetUserRepo().GetByUserid(userid)
+	user, err := repository.GetUserRepo().GetByUserid(userid)
 
 	if err != nil {
 		return nil, err
